@@ -1,5 +1,9 @@
 import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/utils/db/db";
+import { tweetsHistoryTable } from "@/utils/db/schema";
+
+export const maxDuration = 60; // Allow 60 seconds for processing
 
 // Initialize OpenRouter client
 const openrouter = new OpenAI({
@@ -13,8 +17,8 @@ const openrouter = new OpenAI({
 
 // OpenRouter free models (fallback order)
 const MODELS = [
-    "z-ai/glm-4.5-air:free",
     "moonshotai/kimi-k2:free",
+    "z-ai/glm-4.5-air:free",
     "deepseek/deepseek-r1-0528:free",
 ];
 
@@ -105,6 +109,46 @@ Respond with ONLY valid JSON, no markdown, no code blocks:
   "totalTweets": 5
 }`;
 
+async function generateWithGemini(prompt: string): Promise<string | null> {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return null;
+
+    try {
+        console.log(`[API] Trying Gemini 2.5 Flash Lite...`);
+        const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 1000,
+                    },
+                }),
+            }
+        );
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.warn(`[API] Gemini Error (${response.status}):`, errorText);
+            return null; // Fallback to OpenRouter
+        }
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (text) {
+            console.log(`[API] Success with Gemini 2.5 Flash Lite`);
+            return text;
+        }
+    } catch (error) {
+        console.error("[API] Gemini execution failed:", error);
+    }
+    return null;
+}
+
 // Try OpenRouter models with fallback
 async function generateWithOpenRouter(prompt: string): Promise<string | null> {
     if (!openrouter.apiKey) return null;
@@ -130,8 +174,9 @@ async function generateWithOpenRouter(prompt: string): Promise<string | null> {
 }
 
 export async function POST(request: NextRequest) {
+    const startTime = Date.now();
     try {
-        const { text, addEmojis, mode } = await request.json();
+        const { text, addEmojis, mode, visitorId } = await request.json();
 
         if (!text || typeof text !== "string") {
             return NextResponse.json(
@@ -166,7 +211,19 @@ ${text}
 
 Remember: Output ONLY valid JSON. No markdown, no \`\`\`, no explanations.`;
 
-        const responseText = await generateWithOpenRouter(prompt);
+        const genStartTime = Date.now();
+        console.log(`[API] Starting generation...`);
+
+        // 1. Try Gemini First
+        let responseText = await generateWithGemini(prompt);
+
+        // 2. Fallback to OpenRouter if Gemini failed
+        if (!responseText) {
+            console.log(`[API] Gemini failed or skipped. Falling back to OpenRouter...`);
+            responseText = await generateWithOpenRouter(prompt);
+        }
+
+        console.log(`[API] Generation took ${Date.now() - genStartTime}ms`);
 
         if (!responseText) {
             return NextResponse.json(
@@ -196,6 +253,21 @@ Remember: Output ONLY valid JSON. No markdown, no \`\`\`, no explanations.`;
                     return `${t.hook}\n\n${t.body}\n\n${t.closing}`;
                 });
             }
+
+            // Save to database if visitorId is present (Server-Side Saving)
+            if (visitorId && formattedTweets.length > 0) {
+                const dbStartTime = Date.now();
+                await db.insert(tweetsHistoryTable).values({
+                    visitorId,
+                    originalText: text,
+                    improvedText: formattedTweets.join("\n---\n"),
+                    isThread: parsed.type === "thread",
+                    mode: mode || 'auto',
+                }).catch(err => console.error("DB Save Failed:", err));
+                console.log(`[API] DB Save took ${Date.now() - dbStartTime}ms`);
+            }
+
+            console.log(`[API] Total request took ${Date.now() - startTime}ms`);
 
             return NextResponse.json({
                 success: true,

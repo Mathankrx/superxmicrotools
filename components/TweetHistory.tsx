@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { useVisitorId } from "@/hooks/useVisitorId";
 
@@ -22,7 +22,7 @@ export function TweetHistory({ onSelect }: TweetHistoryProps) {
     const [history, setHistory] = useState<HistoryItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const fetchHistory = async () => {
+    const fetchHistory = useCallback(async () => {
         if (!visitorId) return;
 
         try {
@@ -34,11 +34,11 @@ export function TweetHistory({ onSelect }: TweetHistoryProps) {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [visitorId]);
 
     useEffect(() => {
         fetchHistory();
-    }, [visitorId]);
+    }, [fetchHistory]);
 
     const deleteItem = async (id: string) => {
         if (!visitorId) return;

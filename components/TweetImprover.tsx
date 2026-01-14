@@ -45,7 +45,7 @@ export function TweetImprover({ onImproved, initialText }: TweetImproverProps) {
             const response = await fetch("/api/improve-tweet", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text: inputText, addEmojis, mode }),
+                body: JSON.stringify({ text: inputText, addEmojis, mode, visitorId }),
             });
 
             const data = await response.json();
@@ -56,20 +56,7 @@ export function TweetImprover({ onImproved, initialText }: TweetImproverProps) {
 
             onImproved(data);
 
-            // Save to history (fire and forget)
-            if (visitorId && data.tweets?.length > 0) {
-                fetch("/api/history", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        visitorId,
-                        originalText: inputText,
-                        improvedText: data.tweets.join("\n---\n"),
-                        isThread: data.isThread,
-                        mode,
-                    }),
-                }).catch(console.error);
-            }
+            // Saved to history automatically by the server
         } catch (err) {
             setError(err instanceof Error ? err.message : "Something went wrong");
         } finally {

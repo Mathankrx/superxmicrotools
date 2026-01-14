@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { useVisitorId } from "@/hooks/useVisitorId";
 import Link from "next/link";
@@ -20,7 +20,7 @@ export default function HistoryPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [copiedId, setCopiedId] = useState<string | null>(null);
 
-    const fetchHistory = async () => {
+    const fetchHistory = useCallback(async () => {
         if (!visitorId) return;
 
         try {
@@ -32,11 +32,11 @@ export default function HistoryPage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [visitorId]);
 
     useEffect(() => {
         fetchHistory();
-    }, [visitorId]);
+    }, [fetchHistory]);
 
     const deleteItem = async (id: string) => {
         if (!visitorId) return;
@@ -65,14 +65,14 @@ export default function HistoryPage() {
             <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
                 <div className="container mx-auto px-4 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Link href="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                        <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                             <span className="text-2xl">🔥</span>
                             <h1 className="text-xl font-semibold">Tweet Improver AI</h1>
                         </Link>
                     </div>
                     <div className="flex items-center gap-3">
                         <Link
-                            href="/dashboard"
+                            href="/"
                             className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm transition-colors"
                         >
                             ← Back to Editor
@@ -121,7 +121,7 @@ export default function HistoryPage() {
                                 Start improving tweets to see your history here
                             </p>
                             <Link
-                                href="/dashboard"
+                                href="/"
                                 className="inline-block bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-medium transition-colors"
                             >
                                 Start Improving Tweets
