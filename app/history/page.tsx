@@ -65,14 +65,14 @@ export default function HistoryPage() {
             <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
                 <div className="container mx-auto px-4 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                        <Link href="/improver" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                             <span className="text-2xl">🔥</span>
                             <h1 className="text-xl font-semibold">Tweet Improver AI</h1>
                         </Link>
                     </div>
                     <div className="flex items-center gap-3">
                         <Link
-                            href="/"
+                            href="/improver"
                             className="text-muted-foreground hover:text-foreground px-3 py-2 text-sm transition-colors"
                         >
                             ← Back to Editor
@@ -121,7 +121,7 @@ export default function HistoryPage() {
                                 Start improving tweets to see your history here
                             </p>
                             <Link
-                                href="/"
+                                href="/improver"
                                 className="inline-block bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-3 rounded-lg font-medium transition-colors"
                             >
                                 Start Improving Tweets
